@@ -1,0 +1,6 @@
+module Pods_DemoGallery {
+  umbrella header "Pods-DemoGallery-umbrella.h"
+
+  export *
+  module * { export * }
+}
