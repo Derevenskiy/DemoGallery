@@ -19,13 +19,22 @@ enum MediaType {
 
 class ViewController: UIViewController {
     private var assets: [Any] = []
+
+    private var assetsFetchResult = PHFetchResult<PHAsset>() {
+        didSet {
+            var newAsset: [PHAsset] = []
+            assetsFetchResult.enumerateObjects { asset, _, _ in
+                newAsset.append(asset)
+            }
+            assets = newAsset
+        }
+    }
+
     private var fetchLimit = 20
     private var mediaType: MediaType = .photos {
         didSet {
             if mediaType == .lifeCamera {
-                assets.removeAll()
                 assets.append(LifeCameraCollectionViewCellModel())
-                collectionView.reloadData()
             }
         }
     }
@@ -191,18 +200,14 @@ class ViewController: UIViewController {
 
     @objc
     private func getAllAsset(with fetchLimit: Int = 20) {
-        var newAssets: [PHAsset] = []
+        var assetsFetchResult = PHFetchResult<PHAsset>()
 
         let allPhotosOptions = PHFetchOptions()
         allPhotosOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         allPhotosOptions.fetchLimit = assets.count + fetchLimit
 
-        let assets = PHAsset.fetchAssets(with: PHAssetMediaType.image, options: allPhotosOptions)
-        assets.enumerateObjects { (asset, _, _) in
-            newAssets.append(asset)
-        }
-
-        self.assets = newAssets
+        assetsFetchResult = PHAsset.fetchAssets(with: PHAssetMediaType.image, options: allPhotosOptions)
+        self.assetsFetchResult = assetsFetchResult
 
         DispatchQueue.main.async { [weak self] in
             self?.collectionView.reloadData()
@@ -212,7 +217,6 @@ class ViewController: UIViewController {
     @objc
     private func clearAllAsset() {
         assets.removeAll()
-
         DispatchQueue.main.async { [weak self] in
             self?.collectionView.reloadData()
         }
@@ -236,9 +240,11 @@ extension ViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         assets.count
     }
-    
+
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        if let asset = assets[indexPath.row] as? PHAsset {
+        let asset = assets[indexPath.row]
+
+        if let asset = asset as? PHAsset {
             guard let cell = collectionView.dequeueReusableCell(
                 withReuseIdentifier: "AssetCollectionViewCell",
                 for: indexPath
@@ -260,7 +266,6 @@ extension ViewController: UICollectionViewDataSource {
                     cell.configure(with: image)
                 }
             }
-
             return cell
         } else if assets[indexPath.row] is LifeCameraCollectionViewCellModel {
             guard let cell = collectionView.dequeueReusableCell(
@@ -272,19 +277,17 @@ extension ViewController: UICollectionViewDataSource {
         } else {
             fatalError("asset is not")
         }
-
-
     }
-    
-
 }
 
 extension ViewController: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        if assets[indexPath.row] is PHAsset {
+        let asset = assets[indexPath.row]
+
+        if asset is PHAsset {
             let size = (self.view.frame.width / 3) - 5
             return .init(width: size, height: size)
-        } else if assets[indexPath.row] is LifeCameraCollectionViewCellModel {
+        } else if asset is LifeCameraCollectionViewCellModel {
             let height = collectionView.bounds.height / 2
             return .init(width: collectionView.bounds.width, height: height)
         } else {
@@ -339,14 +342,33 @@ extension ViewController: ButtonsViewDelegate {
 
 extension ViewController: PHPhotoLibraryChangeObserver {
     func photoLibraryDidChange(_ changeInstance: PHChange) {
-        let fetchResultChangeDetails = changeInstance.changeDetails(for: assetsFetchResult)
-            guard (fetchResultChangeDetails) != nil else {
-                print("No change in fetchResultChangeDetails")
-                return;
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if let changes = changeInstance.changeDetails(for: assetsFetchResult) {
+                assetsFetchResult = changes.fetchResultAfterChanges
+                if changes.hasIncrementalChanges {
+                    collectionView.performBatchUpdates({ [weak self] in
+                        guard let self = self else { return }
+
+                        if let removed = changes.removedIndexes, removed.count > 0 {
+                            collectionView.deleteItems(at: removed.map { IndexPath(item: $0, section:0) })
+                        }
+                        if let inserted = changes.insertedIndexes, inserted.count > 0 {
+                            collectionView.insertItems(at: inserted.map { IndexPath(item: $0, section:0) })
+                        }
+                        if let changed = changes.changedIndexes, changed.count > 0 {
+                            collectionView.reloadItems(at: changed.map { IndexPath(item: $0, section:0) })
+                        }
+                        changes.enumerateMoves { [weak self] fromIndex, toIndex in
+                            guard let self = self else { return }
+                            collectionView.moveItem(at: IndexPath(item: fromIndex, section: 0),
+                                                    to: IndexPath(item: toIndex, section: 0))
+                        }
+                    })
+                } else {
+                    collectionView.reloadData()
+                }
             }
-            print("Contains changes")
-            assetsFetchResult = (fetchResultChangeDetails?.fetchResultAfterChanges)!
-            let insertedObjects = fetchResultChangeDetails?.insertedObjects
-            let removedObjects = fetchResultChangeDetails?.removedObjects
+        }
     }
 }
