@@ -34,7 +34,14 @@ class ViewController: UIViewController {
     private var mediaType: MediaType = .photos {
         didSet {
             if mediaType == .lifeCamera {
+                guard let assetsLifeCamera = assets as? [LifeCameraCollectionViewCellModel],
+                      assetsLifeCamera.count < 1 else { return }
+
                 assets.append(LifeCameraCollectionViewCellModel())
+
+                DispatchQueue.main.async { [weak self] in
+                    self?.collectionView.reloadData()
+                }
             }
         }
     }
@@ -176,24 +183,31 @@ class ViewController: UIViewController {
     private func openGallery() {
         Task {
             let status = await checkAuthorizationStatus()
-            
-            switch status {
-            case .limited:
+            if status == .limited {
                 await PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: self)
-            default:
-                let imagePicker = UIImagePickerController()
-                imagePicker.sourceType = mediaType == .camera ? .camera : .photoLibrary
-                imagePicker.delegate = self
-                imagePicker.allowsEditing = false
+            } else {
+                if mediaType == .photos {
+                    var config = PHPickerConfiguration()
+                    config.selectionLimit = 3
+                    config.filter = PHPickerFilter.images
 
-                if mediaType == .videos {
-                    imagePicker.mediaTypes = UIImagePickerController.availableMediaTypes(for: .photoLibrary) ?? []
-                    imagePicker.mediaTypes = ["public.movie"]
-                    imagePicker.videoQuality = .typeHigh
-                    imagePicker.videoExportPreset = AVAssetExportPresetHEVC1920x1080
+                    let imagePicker = PHPickerViewController(configuration: config)
+                    present(imagePicker, animated: true, completion: nil)
+                } else {
+                    let imagePicker = UIImagePickerController()
+                    imagePicker.delegate = self
+                    imagePicker.sourceType = mediaType == .camera ? .camera : .photoLibrary
+
+                    if mediaType == .videos {
+                        imagePicker.mediaTypes = ["public.movie"]
+                        imagePicker.videoQuality = .typeHigh
+                        imagePicker.videoExportPreset = AVAssetExportPresetHEVC1920x1080
+                    } else {
+                        imagePicker.mediaTypes = UIImagePickerController.availableMediaTypes(for: .photoLibrary) ?? []
+                    }
+
+                    present(imagePicker, animated: true, completion: nil)
                 }
-
-                present(imagePicker, animated: true, completion: nil)
             }
         }
     }
@@ -314,6 +328,12 @@ extension ViewController: UIImagePickerControllerDelegate, UINavigationControlle
         }
 
         picker.dismiss(animated: true)
+    }
+}
+
+extension ViewController: PHPickerViewControllerDelegate {
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        //TODO: Доработай нахой
     }
 }
 
