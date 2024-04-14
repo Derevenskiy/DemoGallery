@@ -15,6 +15,7 @@ enum MediaType {
     case camera
     case photos
     case videos
+    case all
 }
 
 class ViewController: UIViewController {
@@ -49,7 +50,7 @@ class ViewController: UIViewController {
     private let buttonsView = ButtonsView()
 
     private lazy var assetsSegmentedControl: UISegmentedControl = {
-        let assetsSwitch = UISegmentedControl(items: ["lifeCamera", "camera", "photos", "videos"])
+        let assetsSwitch = UISegmentedControl(items: ["lifeCamera", "camera", "photos", "videos", "all"])
         assetsSwitch.selectedSegmentIndex = 2
         assetsSwitch.addTarget(self, action: #selector(segmentedValueChanged), for: .valueChanged)
         return assetsSwitch
@@ -174,6 +175,8 @@ class ViewController: UIViewController {
             mediaType = .photos
         case 3:
             mediaType = .videos
+        case 4:
+            mediaType = .all
 
         default: break
         }
@@ -186,29 +189,32 @@ class ViewController: UIViewController {
             if status == .limited {
                 await PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: self)
             } else {
-                if mediaType == .photos {
-                    var config = PHPickerConfiguration()
-                    config.selectionLimit = 3
-                    config.filter = PHPickerFilter.images
-
-                    let imagePicker = PHPickerViewController(configuration: config)
-                    present(imagePicker, animated: true, completion: nil)
-                } else {
+                if mediaType == .camera {
                     let imagePicker = UIImagePickerController()
                     imagePicker.delegate = self
-                    imagePicker.sourceType = mediaType == .camera ? .camera : .photoLibrary
+                    imagePicker.sourceType = .camera
+                    present(imagePicker, animated: true, completion: nil)
+                } else {
+                    let photoLibrary = PHPhotoLibrary.shared()
+                    var config = PHPickerConfiguration(photoLibrary: photoLibrary)
+                    config.selectionLimit = 3
+                    config.filter = pickMedia()
 
-                    if mediaType == .videos {
-                        imagePicker.mediaTypes = ["public.movie"]
-                        imagePicker.videoQuality = .typeHigh
-                        imagePicker.videoExportPreset = AVAssetExportPresetHEVC1920x1080
-                    } else {
-                        imagePicker.mediaTypes = UIImagePickerController.availableMediaTypes(for: .photoLibrary) ?? []
-                    }
-
+                    let imagePicker = PHPickerViewController(configuration: config)
+                    imagePicker.delegate = self
                     present(imagePicker, animated: true, completion: nil)
                 }
             }
+        }
+    }
+
+    private func pickMedia() -> PHPickerFilter? {
+        if mediaType == .photos {
+            return .images
+        } else if mediaType == .videos {
+            return .videos
+        } else {
+            return nil
         }
     }
 
@@ -249,6 +255,8 @@ class ViewController: UIViewController {
         await PHPhotoLibrary.requestAuthorization(for: .readWrite)
     }
 }
+
+// MARK: - UICollectionViewDataSource
 
 extension ViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -294,6 +302,8 @@ extension ViewController: UICollectionViewDataSource {
     }
 }
 
+// MARK: - UICollectionViewDelegateFlowLayout
+
 extension ViewController: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         let asset = assets[indexPath.row]
@@ -309,6 +319,8 @@ extension ViewController: UICollectionViewDelegateFlowLayout {
         }
     }
 }
+
+// MARK: - UIImagePickerControllerDelegate
 
 extension ViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
@@ -331,12 +343,24 @@ extension ViewController: UIImagePickerControllerDelegate, UINavigationControlle
     }
 }
 
+
+// MARK: - PHPickerViewControllerDelegate
+
 extension ViewController: PHPickerViewControllerDelegate {
     func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-        //TODO: Доработай нахой
+        picker.dismiss(animated: true)
+
+        let identifiers = results.compactMap(\.assetIdentifier)
+        assetsFetchResult = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
+
+        DispatchQueue.main.async { [weak self] in
+            self?.collectionView.reloadData()
+        }
+
     }
 }
 
+// MARK: - UICollectionViewDelegate
 
 extension ViewController: UICollectionViewDelegate {
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
@@ -346,6 +370,8 @@ extension ViewController: UICollectionViewDelegate {
         }
     }
 }
+
+// MARK: - ButtonsViewDelegate
 
 extension ViewController: ButtonsViewDelegate {
     func buttonDidTap(with type: ButtonType) {
@@ -359,6 +385,8 @@ extension ViewController: ButtonsViewDelegate {
         }
     }
 }
+
+// MARK: - PHPhotoLibraryChangeObserver
 
 extension ViewController: PHPhotoLibraryChangeObserver {
     func photoLibraryDidChange(_ changeInstance: PHChange) {
