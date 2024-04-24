@@ -32,6 +32,7 @@ class ViewController: UIViewController {
     }
 
     private var fetchLimit = 20
+
     private var mediaType: MediaType = .photos {
         didSet {
             if mediaType == .lifeCamera {
@@ -272,22 +273,8 @@ extension ViewController: UICollectionViewDataSource {
                 for: indexPath
             ) as? AssetCollectionViewCell else { fatalError("AssetCollectionViewCell is not found") }
 
-            let manager = PHImageManager.default()
-            let options = PHImageRequestOptions()
-            options.isSynchronous = false
+            cell.configure(with: asset)
 
-            manager.requestImage(
-                for: asset,
-                targetSize: PHImageManagerMaximumSize,
-                contentMode: .aspectFit,
-                options: options
-            ) { image,_ in
-                guard let image = image else { return }
-
-                DispatchQueue.main.async {
-                    cell.configure(with: image)
-                }
-            }
             return cell
         } else if assets[indexPath.row] is LifeCameraCollectionViewCellModel {
             guard let cell = collectionView.dequeueReusableCell(

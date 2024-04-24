@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		096D6D6D306E0AEB32FA36D6 /* libPods-DemoGallery.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ED0330EC09028D31D7049F4A /* libPods-DemoGallery.a */; };
+		2B0B019C2BD566D50067239D /* PHAssetExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0B019B2BD566D50067239D /* PHAssetExtensions.swift */; };
 		2B1B48032B93AB3C00120548 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B1B48022B93AB3C00120548 /* AppDelegate.swift */; };
 		2B1B48052B93AB3C00120548 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B1B48042B93AB3C00120548 /* SceneDelegate.swift */; };
 		2B1B48072B93AB3C00120548 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B1B48062B93AB3C00120548 /* ViewController.swift */; };
@@ -24,6 +25,7 @@
 
 /* Begin PBXFileReference section */
 		2B03572B2B94EE3A0076D7F2 /* PhotosUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PhotosUI.framework; path = System/Library/Frameworks/PhotosUI.framework; sourceTree = SDKROOT; };
+		2B0B019B2BD566D50067239D /* PHAssetExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PHAssetExtensions.swift; sourceTree = "<group>"; };
 		2B1B47FF2B93AB3C00120548 /* DemoGallery.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DemoGallery.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2B1B48022B93AB3C00120548 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		2B1B48042B93AB3C00120548 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -121,6 +123,7 @@
 			isa = PBXGroup;
 			children = (
 				2B6F8FC52BAF332F00AAC3B5 /* UIViewExtensions.swift */,
+				2B0B019B2BD566D50067239D /* PHAssetExtensions.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -249,6 +252,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2B0B019C2BD566D50067239D /* PHAssetExtensions.swift in Sources */,
 				2B1B48072B93AB3C00120548 /* ViewController.swift in Sources */,
 				2B6F8FC32BAF26E900AAC3B5 /* ButtonsView.swift in Sources */,
 				2B4641E22BB54C71006F80C3 /* LifeCameraCollectionViewCell.swift in Sources */,

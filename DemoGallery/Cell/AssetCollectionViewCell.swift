@@ -7,10 +7,17 @@
 
 import UIKit
 import SnapKit
+import Photos
+
+enum PHImageManagerType {
+    case imageManager
+    case cachingImageManager
+}
 
 class AssetCollectionViewCell: UICollectionViewCell {
-    
     private let asset = UIImageView()
+
+    private let imageManagerType: PHImageManagerType = .cachingImageManager
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -29,8 +36,37 @@ class AssetCollectionViewCell: UICollectionViewCell {
     }
 
 
-    func configure(with image: UIImage?) {
-        self.asset.image = image
+    func configure(with asset: PHAsset) {
+        //PHImageManagerMaximumSize - если ставить его, то ячейки при быстром скролле могут наполниться не тем контентом, при более низком разрешении все ок работает
+        let targetSize: CGSize = .init(width: bounds.width * 2, height: bounds.height * 2)
+
+        if imageManagerType == .imageManager {
+            PHImageManager.default().requestImage(
+                for: asset,
+                targetSize: targetSize,
+                contentMode: .aspectFit,
+                options: nil
+            ) { image,_ in
+                guard let image = image else { return }
+
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    self.asset.image = image
+                }
+            }
+        } else {
+            asset.requestImage(
+                targetSize: targetSize,
+                resultHandler: { image in
+                    guard let image = image else { return }
+
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self else { return }
+                        self.asset.image = image
+                    }
+                }
+            )
+        }
     }
 
     private func addViews() {
